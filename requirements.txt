@@ -1,0 +1,8 @@
+# requirements.txt
+flask
+gunicorn
+mysql-connector-python
+pandas
+Flask-Cors
+scikit-learn 
+prophet 
