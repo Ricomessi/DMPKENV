@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EmotionAI Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="sidebar">
+        <h2>EmotionAI</h2>
+        <ul>
+            <li><a href="/">Dashboard</a></li>
+            <li><a href="#">Real-time Tracking</a></li>
+            <li><a href="#">NLP Chat Assistant</a></li>
+            <li><a href="#">Insights & Reports</a></li>
+            <li><a href="#">User Management</a></li>
+            <li><a href="#">System Monitoring</a></li>
+        </ul>
+        <div class="user-info">
+            <p>Demo User</p>
+            <p>Admin</p>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <header>
+            <h1>Emotion Forecasting</h1>
+            <div class="cards">
+                <div class="card">
+                    <h3>Forecast Accuracy</h3>
+                    <p>{{ forecast_accuracy[selected_emotion] }}%</p>
+                </div>
+                <div class="card">
+                    <h3>Trend Forecast</h3>
+                    <p>{{ trend_forecast[selected_emotion] }}</p>
+                </div>
+                <div class="card">
+                    <h3>Forecast Time Range</h3>
+                    <p>{{ forecast_range }}</p>
+                </div>
+            </div>
+        </header>
+
+        <section class="controls">
+            <form method="POST">
+                <label for="emotion">Emotion:</label>
+                <select name="emotion" id="emotion">
+                    {% for emotion in forecast_accuracy.keys() %}
+                    <option value="{{ emotion }}" {% if emotion == selected_emotion %}selected{% endif %}>{{ emotion.capitalize() }}</option>
+                    {% endfor %}
+                </select>
+
+                <label for="forecast_days">Forecast Days:</label>
+                <select name="forecast_days" id="forecast_days">
+                    <option value="7" {% if forecast_days == 7 %}selected{% endif %}>7</option>
+                    <option value="14" {% if forecast_days == 14 %}selected{% endif %}>14</option>
+                    <option value="30" {% if forecast_days == 30 %}selected{% endif %}>30</option>
+                </select>
+
+                <label for="granularity">Granularity:</label>
+                <select name="granularity" id="granularity">
+                    <option value="D" {% if granularity == 'D' %}selected{% endif %}>Daily</option>
+                    <option value="W" {% if granularity == 'W' %}selected{% endif %}>Weekly</option>
+                    <option value="M" {% if granularity == 'M' %}selected{% endif %}>Monthly</option>
+                </select>
+
+                <label for="start_date">Start Date:</label>
+                <input type="date" name="start_date" value="{{ start_date }}">
+
+                <label for="end_date">End Date:</label>
+                <input type="date" name="end_date" value="{{ end_date }}">
+
+                <button type="submit">Recalculate Forecast</button>
+            </form>
+        </section>
+
+        <section class="chart">
+            {% if plot_url %}
+            <h2>Forecast Chart</h2>
+            <img src="{{ plot_url }}" alt="Forecast Chart">
+            {% endif %}
+        </section>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+</body>
+</html>

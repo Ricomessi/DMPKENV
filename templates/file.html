@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EmotionAI Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial; margin: 0; background: #f9f9f9; }
+        .sidebar { width: 220px; background: #f4f4f4; height: 100vh; position: fixed; padding: 20px; }
+        .content { margin-left: 240px; padding: 20px; }
+        .card { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .charts { display: flex; gap: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; border-bottom: 1px solid #ddd; }
+        .tag { background: #f55; color: white; padding: 3px 6px; border-radius: 5px; font-size: 12px; }
+        h1, h2, h3 { margin-top: 0; }
+        select { margin-bottom: 10px; padding: 5px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>EmotionAI</h2>
+        <ul>
+            <li>Dashboard</li>
+            <li>Emotion Forecasting</li>
+            <li>Real-time Tracking</li>
+            <li>NLP Chat Assistant</li>
+            <li>Insights & Reports</li>
+            <li>User Management</li>
+            <li>System Monitoring</li>
+        </ul>
+    </div>
+    <div class="content">
+        <h1>Dashboard</h1>
+
+        <div class="card" id="summary">
+            <p><strong>Detected Faces Today:</strong> <span id="detected_faces"></span></p>
+            <p><strong>Dominant Emotion:</strong> <span id="dominant_emotion"></span></p>
+            <p><strong>Weekly Emotion Change:</strong> <br><span id="weekly_change"></span></p>
+        </div>
+
+        <div class="charts">
+            <div class="card" style="flex:1;">
+                <h3>Emotion Distribution</h3>
+                <select id="rangeSelect" onchange="loadDistribution()">
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                </select>
+                <canvas id="distributionChart"></canvas>
+            </div>
+
+            <div class="card" style="flex:2;">
+                <h3>Real-Time Emotion Trends</h3>
+                <select id="chartType" onchange="loadTrendsToday()">
+                    <option value="line">Line</option>
+                    <option value="bar">Bar</option>
+                    <option value="area">Area</option>
+                </select>
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Recent Emotion Logs</h3>
+            <table>
+                <thead><tr><th>Time</th><th>Person</th><th>Emotion</th><th>Confidence</th></tr></thead>
+                <tbody id="log_table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function loadSummary() {
+            const res = await fetch('/api/summary');
+            const data = await res.json();
+            document.getElementById('detected_faces').textContent = data.detected_faces;
+            document.getElementById('dominant_emotion').textContent = data.dominant_emotion;
+
+            let changes = "";
+            for (let emotion in data.weekly_changes) {
+                let value = data.weekly_changes[emotion];
+                let sign = value > 0 ? "+" : "";
+                changes += `${emotion}: ${sign}${value}%<br>`;
+            }
+            document.getElementById('weekly_change').innerHTML = changes;
+        }
+
+        async function loadDistribution() {
+            const range = document.getElementById('rangeSelect').value;
+            const res = await fetch('/api/distribution?range=' + range);
+            const data = await res.json();
+            const ctx = document.getElementById('distributionChart').getContext('2d');
+
+            if (window.distributionChartInstance) {
+                window.distributionChartInstance.destroy();
+            }
+
+            window.distributionChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.emotion),
+                    datasets: [{
+                        label: 'Count',
+                        data: data.map(d => d.count),
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)'
+                    }]
+                }
+            });
+        }
+
+        async function loadTrendsToday() {
+            const chartType = document.getElementById('chartType').value;
+            const res = await fetch('/api/trends/today');
+            const data = await res.json();
+            const ctx = document.getElementById('trendChart').getContext('2d');
+
+            if (window.trendChartInstance) {
+                window.trendChartInstance.destroy();
+            }
+
+            const datasets = Object.keys(data).map(emotion => ({
+                label: emotion,
+                data: data[emotion].counts,
+                fill: chartType === 'area',
+                borderWidth: 1
+            }));
+
+            window.trendChartInstance = new Chart(ctx, {
+                type: chartType === 'area' ? 'line' : chartType,
+                data: {
+                    labels: data[Object.keys(data)[0]]?.hours || [],
+                    datasets
+                },
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Hour (Today)' } },
+                        y: { title: { display: true, text: 'Count' } }
+                    }
+                }
+            });
+        }
+
+        async function loadLogs() {
+            const res = await fetch('/api/logs');
+            const data = await res.json();
+            const tbody = document.getElementById('log_table');
+            tbody.innerHTML = '';
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${row.timestamp}</td><td>${row.user_id}</td><td><span class="tag">${row.emotion}</span></td><td>${row.confidence}%</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Auto refresh hourly
+        setInterval(loadTrendsToday, 3600000);
+
+        // Load all on page load
+        loadSummary();
+        loadDistribution();
+        loadTrendsToday();
+        loadLogs();
+    </script>
+</body>
+</html>
